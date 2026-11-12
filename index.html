@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Sideline Soccer Stats</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --green: #16a34a;
+      --blue: #2563eb;
+      --indigo: #4f46e5;
+      --orange: #d97706;
+      --yellow: #eab308;
+      --red: #dc2626;
+      --slate: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+
+    /* Top Bar & Metadata */
+    .header-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 12px;
+      background: var(--panel);
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      align-items: end;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+
+    input, textarea {
+      user-select: text;
+      background: #0f172a;
+      border: 2px solid #334155;
+      color: var(--text);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 1.05rem;
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #38bdf8;
+    }
+
+    /* Mode Toggle (Add vs Subtract) */
+    .mode-toggle {
+      height: 48px;
+      padding: 0 18px;
+      border-radius: 8px;
+      border: 2px solid #475569;
+      background: #334155;
+      color: white;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .mode-toggle.subtract-active {
+      background: #7f1d1d;
+      border-color: #ef4444;
+      color: #fecaca;
+    }
+
+    /* Stat Buttons Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .stat-btn {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 18px 20px;
+      min-height: 125px;
+      border: none;
+      border-radius: 16px;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+      transition: transform 0.06s ease, filter 0.1s ease;
+      text-align: left;
+    }
+
+    .stat-btn:active {
+      transform: scale(0.96);
+      filter: brightness(1.15);
+    }
+
+    .stat-label {
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .stat-count {
+      align-self: flex-end;
+      font-size: 2.6rem;
+      font-weight: 900;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 4px 16px;
+      border-radius: 12px;
+      min-width: 72px;
+      text-align: center;
+    }
+
+    /* Color Themes for Quick Visual Differentiation */
+    .color-goal { background: linear-gradient(135deg, #16a34a, #15803d); }
+    .color-shot { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+    .color-pass { background: linear-gradient(135deg, #0284c7, #0369a1); }
+    .color-setpiece { background: linear-gradient(135deg, #4f46e5, #4338ca); }
+    .color-foul { background: linear-gradient(135deg, #ea580c, #c2410c); }
+    .color-yellow { background: linear-gradient(135deg, #ca8a04, #a16207); }
+    .color-red { background: linear-gradient(135deg, #dc2626, #991b1b); }
+    .color-offside { background: linear-gradient(135deg, #475569, #334155); }
+
+    /* Notes & Actions Section */
+    .bottom-section {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+      background: var(--panel);
+      padding: 14px;
+      border-radius: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    .actions-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .action-btn {
+      padding: 14px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      color: white;
+    }
+
+    .btn-sync { background: #16a34a; }
+    .btn-csv { background: #3b82f6; }
+    .btn-reset { background: #475569; font-size: 0.9rem; padding: 10px; }
+
+    .status-banner {
+      font-size: 0.9rem;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #0f172a;
+      color: #38bdf8;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    @media (max-width: 768px) {
+      .header-bar { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .bottom-section { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Match Metadata Bar -->
+  <div class="header-bar">
+    <div class="field-group">
+      <label for="gameDateTime">Game Date & Time</label>
+      <input type="datetime-local" id="gameDateTime" />
+    </div>
+    <div class="field-group">
+      <label for="opponent">Opponent Name</label>
+      <input type="text" id="opponent" placeholder="e.g., Riverside Poly HS" />
+    </div>
+    <button id="modeToggleBtn" class="mode-toggle" onclick="toggleMode()">
+      Mode: +1 Add
+    </button>
+  </div>
+
+  <!-- Stat Buttons Grid -->
+  <div id="statsGrid" class="stats-grid"></div>
+
+  <!-- Large Misc Notes & Sync Controls -->
+  <div class="bottom-section">
+    <div class="field-group">
+      <label for="gameNotes">Misc Game Notes (Halftime adjustments, player standouts, injuries, tactical notes)</label>
+      <textarea id="gameNotes" placeholder="Type ongoing match notes here... Automatically saved offline as you type."></textarea>
+    </div>
+
+    <div class="actions-panel">
+      <div id="statusBanner" class="status-banner">Saved Offline on iPad</div>
+      <button class="action-btn btn-sync" onclick="syncToGoogleSheets()">
+        ☁️ Sync Game to Google Sheets
+      </button>
+      <button class="action-btn btn-csv" onclick="exportCSV()">
+        📥 Backup: Download CSV
+      </button>
+      <button class="action-btn btn-reset" onclick="resetGame()">
+        🔄 Clear / Start New Game
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW
+    // =========================================================================
+    const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxPGLMG4c7adtG-b_LcFQITXef1lgDPFQfdpauvH05dppvhPI2pD97hqpkZFM5E-Rw7/exec";
+
+    // =========================================================================
+    // 2. CONFIGURE STATS HERE (Add more items anytime!)
+    // =========================================================================
+    const STATS_CONFIG = [
+      { id: "goals",            label: "⚽ Goals",            colorClass: "color-goal" },
+      { id: "shots",            label: "🎯 Shots",            colorClass: "color-shot" },
+      { id: "shots_on_goal",    label: "🥅 Shots on Goal",    colorClass: "color-shot" },
+      { id: "completed_passes", label: "✅ Completed Passes", colorClass: "color-pass" },
+      { id: "corner_kicks",     label: "🚩 Corner Kicks",     colorClass: "color-setpiece" },
+      { id: "offsides",         label: "📏 Offsides",         colorClass: "color-offside" },
+      { id: "fouls_committed",  label: "⚠️ Fouls Committed",  colorClass: "color-foul" },
+      { id: "yellow_cards",     label: "🟨 Yellow Cards",     colorClass: "color-yellow" },
+      { id: "red_cards",        label: "🟥 Red Cards",        colorClass: "color-red" }
+    ];
+
+    const STORAGE_KEY = "soccer_stat_tracker_v1";
+    let subtractMode = false;
+
+    // Default state
+    let appState = {
+      gameDateTime: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+      opponent: "",
+      notes: "",
+      stats: {},
+      synced: false
+    };
+
+    // Initialize App
+    function init() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        appState = JSON.parse(saved);
+      } else {
+        STATS_CONFIG.forEach(s => appState.stats[s.id] = 0);
+      }
+
+      // Ensure any newly added stats in STATS_CONFIG exist in appState
+      STATS_CONFIG.forEach(s => {
+        if (typeof appState.stats[s.id] !== "number") appState.stats[s.id] = 0;
+      });
+
+      document.getElementById("gameDateTime").value = appState.gameDateTime;
+      document.getElementById("opponent").value = appState.opponent;
+      document.getElementById("gameNotes").value = appState.notes;
+
+      document.getElementById("gameDateTime").addEventListener("input", e => {
+        appState.gameDateTime = e.target.value;
+        saveState();
+      });
+      document.getElementById("opponent").addEventListener("input", e => {
+        appState.opponent = e.target.value;
+        saveState();
+      });
+      document.getElementById("gameNotes").addEventListener("input", e => {
+        appState.notes = e.target.value;
+        saveState();
+      });
+
+      renderButtons();
+      updateStatusBanner();
+    }
+
+    function renderButtons() {
+      const grid = document.getElementById("statsGrid");
+      grid.innerHTML = "";
+      STATS_CONFIG.forEach(stat => {
+        const btn = document.createElement("button");
+        btn.className = `stat-btn ${stat.colorClass}`;
+        btn.onclick = () => handleStatTap(stat.id);
+        btn.innerHTML = `
+          <span class="stat-label">${stat.label}</span>
+          <span class="stat-count" id="count-${stat.id}">${appState.stats[stat.id] || 0}</span>
+        `;
+        grid.appendChild(btn);
+      });
+    }
+
+    function handleStatTap(statId) {
+      const delta = subtractMode ? -1 : 1;
+      appState.stats[statId] = Math.max(0, (appState.stats[statId] || 0) + delta);
+      appState.synced = false;
+      document.getElementById(`count-${statId}`).textContent = appState.stats[statId];
+      saveState();
+    }
+
+    function toggleMode() {
+      subtractMode = !subtractMode;
+      const btn = document.getElementById("modeToggleBtn");
+      if (subtractMode) {
+        btn.textContent = "Mode: -1 Undo";
+        btn.classList.add("subtract-active");
+      } else {
+        btn.textContent = "Mode: +1 Add";
+        btn.classList.remove("subtract-active");
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      updateStatusBanner();
+    }
+
+    function updateStatusBanner(customMsg) {
+      const banner = document.getElementById("statusBanner");
+      if (customMsg) {
+        banner.textContent = customMsg;
+        return;
+      }
+      banner.textContent = appState.synced
+        ? "✅ Synced to Google Sheets"
+        : "💾 Saved Offline on iPad (Unsynced)";
+    }
+
+    async function syncToGoogleSheets() {
+      if (!navigator.onLine) {
+        alert("iPad is currently offline. Your stats are safely saved on the iPad—connect to Wi-Fi or hotspot after the game and tap Sync again!");
+        return;
+      }
+      if (!GOOGLE_SHEETS_WEBHOOK_URL || GOOGLE_SHEETS_WEBHOOK_URL.includes("PASTE_YOUR")) {
+        alert("Please paste your Google Apps Script Web App URL into GOOGLE_SHEETS_WEBHOOK_URL in index.html first.");
+        return;
+      }
+
+      updateStatusBanner("⏳ Syncing to Google Sheets...");
+      try {
+        await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+          method: "POST",
+          mode: "no-cors", // Prevents CORS preflight blocks with Google Apps Script
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(appState)
+        });
+        appState.synced = true;
+        saveState();
+        alert("Success! Game stats sent to Google Sheets.");
+      } catch (err) {
+        updateStatusBanner("⚠️ Sync failed - Saved locally");
+        alert("Could not reach Google Sheets. Your stats are still safely saved on this iPad.");
+      }
+    }
+
+    function exportCSV() {
+      const headers = ["Game Date & Time", "Opponent", ...STATS_CONFIG.map(s => s.label), "Misc Notes"];
+      const values = [
+        `"${appState.gameDateTime}"`,
+        `"${(appState.opponent || "").replace(/"/g, '""')}"`,
+        ...STATS_CONFIG.map(s => appState.stats[s.id] || 0),
+        `"${(appState.notes || "").replace(/"/g, '""')}"`
+      ];
+      const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + values.join(",");
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute("download", `soccer_stats_${appState.opponent || "game"}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function resetGame() {
+      if (!confirm("Start a new game? Make sure you have synced or exported the current game first!")) return;
+      appState = {
+        gameDateTime: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
+        opponent: "",
+        notes: "",
+        stats: {},
+        synced: false
+      };
+      STATS_CONFIG.forEach(s => appState.stats[s.id] = 0);
+      document.getElementById("gameDateTime").value = appState.gameDateTime;
+      document.getElementById("opponent").value = "";
+      document.getElementById("gameNotes").value = "";
+      renderButtons();
+      saveState();
+    }
+
+    init();
+  </script>
+</body>
+</html>
